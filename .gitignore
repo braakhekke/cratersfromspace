@@ -1,0 +1,6 @@
+# written by the deploy workflow; locally it points the page at the Worker
+config.js
+# Copernicus credentials for scripts/serve.py
+scripts/.cdse-credentials
+.DS_Store
+__pycache__/

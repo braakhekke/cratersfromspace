@@ -1,0 +1,77 @@
+# Builds volcanoes.js from the Smithsonian GVP web service and publishes the site on GitHub Pages.
+# Runs on every push to main, on the 1st of each month, and on demand (Actions tab -> Run workflow).
+name: Build data and deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 5 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write      # commit the refreshed volcanoes.js
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download GVP data and build volcanoes.js
+        id: data
+        continue-on-error: true      # if the GVP service is unreachable, publish with the last committed data
+        run: python scripts/build_volcanoes.py --out volcanoes.js
+
+      - name: Commit volcanoes.js if it changed
+        if: steps.data.outcome == 'success'
+        run: |
+          git add volcanoes.js
+          if git diff --cached --quiet; then
+            echo "volcanoes.js unchanged"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update volcano data from GVP [skip ci]"
+            git push
+          fi
+
+      - name: Collect site files
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          mkdir -p _site/fonts && cp fonts/*.woff2 _site/fonts/ && { [ -f fonts/OFL.txt ] && cp fonts/OFL.txt _site/fonts/ || true; }
+          [ -f volcanoes.js ] && cp volcanoes.js _site/ || echo "volcanoes.js not available yet"
+          touch _site/.nojekyll
+
+      - name: Write site configuration (Copernicus relay address)
+        env:
+          CDSE_RELAY_URL: ${{ vars.CDSE_RELAY_URL }}   # Settings -> Secrets and variables -> Actions -> Variables
+        run: |
+          python3 -c 'import json,os; print("window.CFS_CONFIG = " + json.dumps({"relay": os.environ.get("CDSE_RELAY_URL","").strip()}) + ";")' > _site/config.js
+          cat _site/config.js
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,16 @@
+# Optional: deploy with the Cloudflare CLI instead of pasting worker.js into the dashboard.
+#   npx wrangler deploy                       (from this folder)
+#   npx wrangler secret put CDSE_CLIENT_ID
+#   npx wrangler secret put CDSE_CLIENT_SECRET
+name = "cratersfromspace-relay"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+[vars]
+ALLOWED_ORIGINS = "https://braakhekke.github.io,http://localhost:8000"
+
+# Image cache (recommended). Create it with:  npx wrangler kv namespace create CACHE
+# then paste the id it prints below and uncomment.
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "paste-the-namespace-id-here"

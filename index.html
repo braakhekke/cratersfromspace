@@ -1,0 +1,1156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Craters from Space</title>
+<meta name="description" content="Ten of the world's most active volcanoes, seen from space during their eruptions: one clear Sentinel-2 scene per eruption event since 2016.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+<style>
+@font-face { font-family: "Schibsted Grotesk"; src: url("fonts/SchibstedGrotesk-Variable.woff2") format("woff2"); font-weight: 400 900; font-display: swap; }
+:root {
+  --accent: #D9481C; --accent-d: #b23a14; --ink: #1d1f24; --muted: #6b7280; --line: #e4e5e8; --tile: #f3f4f6; --card: #fff; --bg: #eceef1;
+  --ice: #2b6f9e; --ash: #3a3f4a;
+  --font: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 14px/1.4 var(--font); color: var(--ink); background: var(--bg); -webkit-text-size-adjust: 100%; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.app { display: grid; grid-template-columns: 310px minmax(0, 1fr) 340px; height: 100vh; height: 100dvh; }
+.controls, .story { overflow-y: auto; background: var(--card); padding: 16px 16px 28px; }
+.controls { border-right: 1px solid var(--line); }
+.story { border-left: 1px solid var(--line); background: var(--bg); padding: 12px; }
+.mhead { display: none; }
+.brand h1 { font-size: 21px; line-height: 1.15; margin: 0 0 4px; letter-spacing: -.01em; }
+.brand h1 b { color: var(--accent); }
+.brand p { margin: 2px 0; color: var(--muted); font-size: 12.5px; }
+.brand .byline { font-size: 11.5px; }
+.step { margin-top: 18px; }
+.step-h { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11.5px; letter-spacing: 0; }
+.m-select { display: none; width: 100%; padding: 9px; font: inherit; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.volcanoes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.volcanoes button { width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: baseline; gap: 6px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.volcanoes button small { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+.volcanoes button[aria-pressed="true"] { border-color: var(--accent); background: #fff3ee; box-shadow: inset 3px 0 0 var(--accent); }
+.modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.modes button, .swatches button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12px; }
+.modes svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.modes button[aria-pressed="true"], .swatches button[aria-pressed="true"] { border-color: var(--accent); background: #fff3ee; color: var(--accent-d); }
+.swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 10px; }
+.swatches i { width: 100%; height: 14px; border-radius: 4px; }
+.sw-natural i { background: linear-gradient(90deg, #4c5a3a, #8a7a5c, #c9bfae); }
+.sw-swir i { background: linear-gradient(90deg, #14213d, #7a1d1d, #ff7a00, #ffe14d); }
+.sw-infra i { background: linear-gradient(90deg, #1b3a4b, #b3202e, #f0a0a0); }
+.note { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+.stack { display: grid; gap: 8px; margin-top: 12px; }
+.stack[hidden] { display: none; }
+.side-label { font-size: 11.5px; color: var(--muted); margin-bottom: 3px; }
+.events { display: flex; flex-wrap: wrap; gap: 4px; }
+.events button { padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 12px; line-height: 1.2; }
+.events button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.events button:disabled { opacity: .35; cursor: default; }
+.events button.some:not([aria-pressed="true"]) { border-style: dashed; }
+.events button.wait { opacity: .6; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.play, .act { padding: 7px 14px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; }
+.play:disabled, .act:disabled { opacity: .45; cursor: default; }
+.act { width: 100%; margin-top: 8px; background: var(--ash); }
+select.small { padding: 5px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 12.5px; background: #fff; }
+.toggle { display: flex; gap: 6px; align-items: center; font-size: 12.5px; }
+input[type=range].frame { width: 100%; accent-color: var(--accent); }
+.status { margin: 10px 0 0; padding: 7px 9px; border-radius: 8px; background: var(--tile); font-size: 12px; color: var(--ash); }
+.status.busy::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 6px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.dl { display: grid; gap: 2px; text-align: left; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.dl svg { width: 22px; height: 22px; fill: none; stroke: var(--accent); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.dl b { font-size: 13px; } .dl small { color: var(--muted); font-size: 11px; }
+
+/* stage */
+.stage { position: relative; min-width: 0; background: #0a1426; overflow: hidden; }
+#map { position: absolute; inset: 0; background: transparent; }
+.year-tag { position: absolute; z-index: 500; top: 14px; padding: 8px 12px; border-radius: 10px; background: rgba(10,16,28,.72); color: #fff; font-weight: 800; font-size: 26px; line-height: 1; pointer-events: none; }
+.year-tag small { display: block; margin-top: 4px; font-size: 11px; font-weight: 500; opacity: .8; letter-spacing: .02em; }
+#tagA { left: 14px; } #tagB { right: 14px; text-align: right; } #tagT { left: 14px; }
+.tl-dots { display: flex; gap: 4px; margin-top: 7px; flex-wrap: wrap; max-width: 220px; }
+.tl-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); }
+.tl-dots i.on { background: var(--accent); }
+.divider { position: absolute; z-index: 480; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 6px rgba(0,0,0,.5); pointer-events: none; }
+.handle { position: absolute; z-index: 490; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; border: 2px solid #fff; background: var(--accent); touch-action: none; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.handle svg { width: 22px; height: 22px; stroke: #fff; }
+.stage.no-compare .divider, .stage.no-compare .handle, .stage.no-compare #tagA, .stage.no-compare #tagB, .stage.no-images .divider, .stage.no-images .handle { display: none; }
+.stage:not(.is-tl) #tagT { display: none; }
+.stage.is-tl #tagA, .stage.is-tl #tagB { display: none; }
+.layerbox { position: absolute; z-index: 500; left: 14px; bottom: 14px; background: rgba(255,255,255,.94); border-radius: 10px; font-size: 12.5px; box-shadow: 0 2px 10px rgba(0,0,0,.3); max-width: 220px; }
+.layerbox summary { cursor: pointer; padding: 7px 10px; font-weight: 600; }
+.layerbox .lb-body { display: grid; gap: 4px; padding: 0 10px 9px; }
+.mapbar { position: absolute; z-index: 500; right: 14px; bottom: 36px; display: flex; gap: 4px; background: rgba(255,255,255,.94); padding: 4px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.3); }
+.mapbar button { min-width: 34px; height: 34px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; font-size: 16px; display: flex; align-items: center; gap: 5px; }
+.mapbar button:hover { background: var(--tile); }
+.mapbar .lbl { font-size: 12.5px; }
+.notice { position: absolute; z-index: 600; left: 50%; top: 14px; transform: translateX(-50%); max-width: min(520px, 90%); padding: 9px 14px; border-radius: 10px; background: #7a1d12; color: #fff; font-size: 13px; display: none; box-shadow: 0 2px 10px rgba(0,0,0,.4); }
+.notice.show { display: block; }
+.credits { position: absolute; z-index: 450; left: 0; right: 0; bottom: 0; padding: 3px 10px; font-size: 10.5px; color: #e8ecf3; background: rgba(8,12,22,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.credits.open { white-space: normal; }
+.credits a { color: #ffd2bf; }
+.gesture-hint { position: absolute; z-index: 560; left: 50%; top: 40%; transform: translateX(-50%); padding: 10px 14px; border-radius: 10px; background: rgba(0,0,0,.75); color: #fff; font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+.gesture-hint.show { opacity: 1; }
+.crater-pin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; background: rgba(217,72,28,.35); box-shadow: 0 0 0 2px rgba(217,72,28,.8); }
+.video-frame { position: absolute; z-index: 470; pointer-events: none; box-shadow: 0 0 0 9999px rgba(5,8,16,.62); border: 2px solid #fff; border-radius: 2px; }
+.video-frame[hidden] { display: none; }
+.video-frame span { position: absolute; left: 6px; top: 6px; font-size: 11px; color: #fff; background: rgba(0,0,0,.55); padding: 2px 6px; border-radius: 5px; }
+
+/* story */
+.card { background: var(--card); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+.card h2 { margin: 0 0 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); display: flex; gap: 6px; align-items: center; }
+.card h2 svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.card h3 { margin: 0 0 2px; font-size: 20px; letter-spacing: -.01em; }
+.tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.tabs button { flex: 1; padding: 7px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12.5px; }
+.tabs button[aria-pressed="true"] { background: var(--ash); border-color: var(--ash); color: #fff; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tile { background: var(--tile); border-radius: 8px; padding: 7px 9px; }
+.tile b { display: block; font-size: 16px; } .tile span { font-size: 11px; color: var(--muted); }
+.small { font-size: 11.5px; color: var(--muted); }
+.card p { margin: 6px 0; }
+.card a { color: var(--accent-d); }
+.erupt { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.erupt li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; background: var(--tile); border-radius: 8px; font-size: 12.5px; cursor: pointer; }
+.erupt li small { color: var(--muted); font-size: 11px; text-align: right; }
+.erupt li.sel { outline: 2px solid var(--accent); }
+.more { font-size: 12px; background: none; border: 0; color: var(--accent-d); padding: 0; text-decoration: underline; }
+
+/* video panel */
+.video-sheet { position: fixed; z-index: 1000; right: 14px; bottom: 14px; width: 320px; max-height: 90vh; overflow-y: auto; background: #fff; border-radius: 14px; padding: 12px 14px 14px; box-shadow: 0 6px 30px rgba(0,0,0,.45); }
+.video-sheet[hidden] { display: none; }
+.vs-head { display: flex; justify-content: space-between; align-items: center; }
+.vs-close { border: 0; background: none; font-size: 22px; line-height: 1; }
+.segment { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; margin: 8px 0; }
+.segment button { padding: 6px 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12.5px; }
+.segment button small { display: block; color: var(--muted); font-size: 10px; }
+.segment button[aria-pressed="true"] { border-color: var(--accent); background: #fff3ee; }
+.vs-opts { display: grid; gap: 6px; margin: 8px 0; }
+.hint { font-size: 11.5px; color: var(--muted); margin: 4px 0; }
+.vs-progress { height: 6px; background: var(--tile); border-radius: 3px; margin: 8px 0; overflow: hidden; }
+.vs-progress[hidden] { display: none; }
+#vsBar { height: 100%; width: 0; background: var(--accent); }
+.vo-video[hidden], .vo-image[hidden] { display: none !important; }
+.is-image .vo-video { display: none !important; }
+.is-video .vo-image { display: none !important; }
+
+/* phones */
+@media (max-width: 900px) {
+  .app { display: block; height: auto; }
+  .mhead { display: block; padding: 10px 14px; background: var(--ash); color: #fff; }
+  .mhead strong { display: block; font-size: 16px; } .mhead span { font-size: 11.5px; opacity: .8; }
+  .controls { border: 0; overflow: visible; order: 2; }
+  .brand { display: none; }
+  .stage { height: 62vh; height: 62svh; min-height: 340px; }
+  .story { border: 0; overflow: visible; }
+  .volcanoes { display: none; } .m-select { display: block; }
+  .mapbar .lbl { display: none; }
+  .year-tag { font-size: 19px; padding: 6px 9px; }
+  .layerbox { bottom: 30px; }
+  .mapbar { bottom: 30px; }
+  .video-sheet { left: 8px; right: 8px; bottom: 8px; width: auto; }
+  .app { display: flex; flex-direction: column; }
+  .stage { order: 1; } .controls { order: 2; } .story { order: 3; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="mhead"><strong>Craters from Space</strong><span>The most active volcanoes, seen from Sentinel-2 - by J. Braakhekke</span></header>
+
+  <!-- ================= LEFT ================= -->
+  <aside class="controls" aria-label="Settings">
+    <div class="brand">
+      <h1>Craters <b>from Space</b></h1>
+      <p>Ten of the world's most active volcanoes, seen by Sentinel-2 during their eruptions.</p>
+      <p class="byline">Designed to increase public volcano awareness - by J. Braakhekke.</p>
+    </div>
+
+    <section class="step">
+      <h2 class="step-h"><span class="num">1</span>Choose a volcano</h2>
+      <select id="mVolcano" class="m-select" aria-label="Volcano"></select>
+      <ul class="volcanoes" id="volcanoList"></ul>
+    </section>
+
+    <section class="step">
+      <h2 class="step-h"><span class="num">2</span>Visualise</h2>
+      <div class="modes" role="group" aria-label="View mode">
+        <button type="button" id="modeSingle" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg><span>One event</span></button>
+        <button type="button" id="modeCompare" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M12 4v16M8 10l-2 2 2 2M16 10l2 2-2 2"/></svg><span>Compare</span></button>
+        <button type="button" id="modeTimelapse" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span>Timelapse</span></button>
+      </div>
+
+      <div class="swatches" role="group" aria-label="Colours">
+        <button type="button" class="sw-natural" id="styleNatural" aria-pressed="true"><i></i><span>Natural</span></button>
+        <button type="button" class="sw-swir" id="styleSwir" aria-pressed="false"><i></i><span>Heat (SWIR)</span></button>
+        <button type="button" class="sw-infra" id="styleInfra" aria-pressed="false"><i></i><span>Infrared</span></button>
+      </div>
+      <p class="note" id="styleNote"></p>
+
+      <div class="stack" id="compareControls">
+        <div><div class="side-label">Left</div><div class="events" id="evA" role="group" aria-label="Event for the left image"></div></div>
+        <div><div class="side-label">Right</div><div class="events" id="evB" role="group" aria-label="Event for the right image"></div></div>
+      </div>
+      <div class="stack" id="singleControls" hidden>
+        <div><div class="side-label">Event</div><div class="events" id="evOne" role="group" aria-label="Event to show"></div></div>
+      </div>
+      <div class="stack" id="timelapseControls" hidden>
+        <div><div class="side-label">From</div><div class="events" id="evFrom" role="group" aria-label="First event of the timelapse"></div></div>
+        <div><div class="side-label">To</div><div class="events" id="evTo" role="group" aria-label="Last event of the timelapse"></div></div>
+        <div class="row">
+          <button type="button" class="play" id="playBtn">Play</button>
+          <select class="small" id="speedSel" aria-label="Speed">
+            <option value="2200">0.5 fps</option><option value="1200" selected>1.0 fps</option><option value="600">2.0 fps</option><option value="300">4.0 fps</option>
+          </select>
+          <label class="toggle"><input type="checkbox" id="loopToggle" checked> <span>Loop</span></label>
+        </div>
+        <input type="range" class="frame" id="frameSlider" min="0" max="0" value="0" aria-label="Timelapse frame">
+      </div>
+      <p class="status busy" id="status">Looking for the clearest scene of each event…</p>
+    </section>
+
+    <section class="step">
+      <h2 class="step-h"><span class="num">3</span>Download and share</h2>
+      <div class="dl-grid">
+        <button type="button" class="dl" id="imageBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg><b>Download image</b><small>one picture, JPEG</small></button>
+        <button type="button" class="dl" id="videoBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z"/></svg><b>Download animation</b><small>short video, MP4</small></button>
+      </div>
+      <button type="button" class="act" id="shareBtn">Share this view</button>
+    </section>
+  </aside>
+
+  <!-- ================= CENTRE ================= -->
+  <main class="stage" id="stage">
+    <div id="map" role="application" aria-label="Satellite image map"></div>
+    <div class="year-tag" id="tagA">-<small>Sentinel-2</small></div>
+    <div class="year-tag" id="tagB">-<small>Sentinel-2</small></div>
+    <div class="year-tag" id="tagT">-<small id="tagTsub">Timelapse</small><div class="tl-dots" id="tlDots"></div></div>
+    <div class="divider" id="divider"></div>
+    <button class="handle" id="handle" type="button" role="slider" aria-label="Comparison slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg>
+    </button>
+    <details class="layerbox" id="layerbox" open>
+      <summary>Layers</summary>
+      <div class="lb-body">
+        <label class="toggle"><input type="checkbox" id="pinToggle" checked> <span>Crater marker</span></label>
+        <label class="toggle"><input type="checkbox" id="mosaicToggle" checked> <span>Sentinel-2 background</span></label>
+        <label class="toggle"><input type="checkbox" id="osmToggle"> <span>OpenStreetMap</span></label>
+        <label class="toggle"><input type="checkbox" id="labelsToggle" checked> <span>Place labels</span></label>
+      </div>
+    </details>
+    <div class="mapbar" role="toolbar" aria-label="Map tools">
+      <button type="button" id="zoomOut" aria-label="Zoom out">−</button>
+      <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+      <button type="button" id="fitBtn" aria-label="Whole image"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="lbl">Whole image</span></button>
+      <button type="button" id="craterBtn" aria-label="Crater"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg><span class="lbl">Crater</span></button>
+    </div>
+    <div class="notice" id="notice" role="alert"></div>
+    <div class="gesture-hint" id="gestureHint" aria-hidden="true">Use two fingers to move the map</div>
+    <div class="video-frame" id="videoFrame" hidden><span id="videoFrameNote"></span></div>
+    <div class="credits" id="credits" role="button" tabindex="0" title="Show all credits"></div>
+  </main>
+
+  <!-- ================= RIGHT ================= -->
+  <article class="story" id="story" aria-live="polite"></article>
+</div>
+
+<!-- ================= VIDEO / IMAGE EXPORT PANEL ================= -->
+<section class="video-sheet is-video" id="videoSheet" role="dialog" aria-label="Download" hidden>
+  <div class="vs-head"><strong id="vsTitle">Download animation</strong><button type="button" class="vs-close" id="vsClose" aria-label="Close">×</button></div>
+  <p class="hint">Move and zoom the map until the crater fits the frame.</p>
+  <div class="segment" role="group" aria-label="Format">
+    <button type="button" id="vfWide" aria-pressed="true">16:9<small>(standard)</small></button>
+    <button type="button" id="vfReel" aria-pressed="false">9:16<small>(Reels, TikTok)</small></button>
+    <button type="button" id="vfFeed" aria-pressed="false">4:5<small>(Insta feed)</small></button>
+  </div>
+  <div class="segment vo-video" role="group" aria-label="Video type">
+    <button type="button" id="vtTimelapse" aria-pressed="true">Timelapse</button>
+    <button type="button" id="vtSwipe" aria-pressed="false">Slider</button>
+  </div>
+  <div class="vs-opts vo-video">
+    <label class="toggle"><span>Speed</span> <select class="small" id="vSpeed"><option value="2.2">0.5 fps</option><option value="1.2" selected>1.0 fps</option><option value="0.6">2.0 fps</option><option value="0.3">4.0 fps</option></select></label>
+  </div>
+  <p class="hint" id="vsInfo"></p>
+  <div class="vs-progress" id="vsProgress" hidden><div id="vsBar"></div></div>
+  <button type="button" class="play" id="vsGo" style="width:100%;padding:9px 12px;font-size:14px">Download video</button>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+<!-- generated by scripts/build_volcanoes.py -->
+<script src="volcanoes.js"></script>
+<!-- written by the deploy workflow; sets the address of the Copernicus relay (Cloudflare Worker) -->
+<script src="config.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+/* =====================================================================
+   1. Static data
+   ===================================================================== */
+const VOLCANOES = (window.VOLCANO_DATA || []).filter(v => v.events && v.events.length);
+const GVP_URL = v => `https://volcano.si.edu/volcano.cfm?vn=${v.gvp}`;
+const CURRENT_YEAR = new Date().getUTCFullYear();
+const TODAY = new Date().toISOString().slice(0, 10);
+const DAY_MS = 864e5;
+const addDays = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * DAY_MS).toISOString().slice(0, 10);
+
+/* =====================================================================
+   2. Imagery: the clearest Sentinel-2 scene of each event
+      For every event one Statistical API request scores all acquisitions in the event's search period by cloud cover (scene
+      classification, SCL). The clearest scene (at most 5 % cloud, the earliest of those) is taken; if none is that clear, the
+      least cloudy up to 30 % ("some clouds"). The chosen day is rendered with the Process API.
+   ===================================================================== */
+const prefs = (() => { try { return JSON.parse(localStorage.getItem('craterPrefs') || '{}'); } catch { return {}; } })();
+const savePrefs = () => { try { localStorage.setItem('craterPrefs', JSON.stringify(prefs)); } catch {} };
+
+const CDSE = {
+  collection: 'sentinel-2-l2a',
+  maxCloud:   0.05,            // a scene counts as clear when at most 5 % of the area is cloud or cloud shadow
+  minCover:   0.95,            // the scene must cover at least 95 % of the image area
+  fallbackCloud: 0.30,         // if nothing is clear: the least cloudy one up to 30 %
+  statsRes:   60,              // metres per pixel for scoring scenes
+  groundRes:  10,              // metres per pixel of the images
+  maxPx:      2500,            // Process API output limit per side
+  version:    'cfs-v1'         // bump when scoring or rendering changes, to invalidate cached results
+};
+
+/* Scene scoring: SCL 3 = cloud shadow, 8/9 = cloud, 10 = thin cirrus. Eruption plumes of ash and steam count as cloud, too.
+   A day can hold two passes over the same place (two orbits); each orbit is scored separately (slots A and B), and a picture is made from
+   the scenes of the chosen orbit only, so it is never a patchwork. */
+const ONE_ORBIT = `function preProcessScenes(c){ var t = c.scenes.tiles, m = t.length > 1 ? /_R\\d{3}_/.exec(JSON.stringify(t[0])) : null; if (m) c.scenes.tiles = t.filter(function(x){ return JSON.stringify(x).indexOf(m[0]) >= 0; }); return c; }`;
+const orbitFilter = orbit => !orbit ? ONE_ORBIT : `function preProcessScenes(c){ c.scenes.tiles = c.scenes.tiles.filter(function(x){ return JSON.stringify(x).indexOf("_${orbit}_") >= 0; }); return c; }`;
+const SCENE_EVALSCRIPT = `//VERSION=3
+function setup(){ return { input:[{ bands:["SCL","dataMask"] }], mosaicking:"TILE",
+  output:[{ id:"cloudA", bands:1, sampleType:"FLOAT32" }, { id:"validA", bands:1, sampleType:"FLOAT32" }, { id:"orbA", bands:1, sampleType:"FLOAT32" },
+          { id:"cloudB", bands:1, sampleType:"FLOAT32" }, { id:"validB", bands:1, sampleType:"FLOAT32" }, { id:"orbB", bands:1, sampleType:"FLOAT32" }, { id:"dataMask", bands:1 }] }; }
+var ORB = [], OA = 0, OB = 0;
+function preProcessScenes(c){ ORB = c.scenes.tiles.map(function(t){ var m = /_R(\\d{3})_/.exec(JSON.stringify(t)); return m ? +m[1] : 0; }); OA = ORB[0] || 0; OB = 0; for (var i = 1; i < ORB.length; i++) if (ORB[i] && ORB[i] !== OA) { OB = ORB[i]; break; } return c; }
+function evaluatePixel(ss){
+  var a = { c:0, v:0 }, b = { c:0, v:0 };
+  for (var i = 0; i < ss.length; i++) { var x = ss[i]; if (x.dataMask != 1 || x.SCL == 0) continue; var t = ORB[i] === OA ? a : ORB[i] === OB ? b : null;
+    if (t && !t.v) { t.v = 1; t.c = (x.SCL == 3 || x.SCL == 8 || x.SCL == 9 || x.SCL == 10) ? 1 : 0; } }
+  return { cloudA:[a.c], validA:[a.v], orbA:[OA], cloudB:[b.c], validB:[b.v], orbB:[OB], dataMask:[1] };
+}`;
+
+/* Colours: the Copernicus Browser "true color" process (Rayleigh correction, soft contrast curve around midR, gamma with offset, saturation boost, sRGB),
+   applied to other band combinations as well, the same for every event so differences are real.
+   Images come from Sentinel-2 Level-1C (top of atmosphere). Band combinations as red, green, blue:
+     natural  B04 B03 B02      swir  B12 B8A B04 (shortwave infrared: hot lava and fresh flows glow orange to yellow)      infra  B08 B04 B03 (vegetation red) */
+const TRUE_COLOR = { maxR: 3, midR: 0.13, sat: 1.3, gamma: 2.3, gOff: 0.01, ray: { B04: 0.013, B03: 0.024, B02: 0.041, B08: 0, B8A: 0, B11: 0, B12: 0 } };
+const STYLE_BANDS = { natural: ['B04','B03','B02'], swir: ['B12','B8A','B04'], infra: ['B08','B04','B03'] };
+const STYLE_NAME = { natural: 'natural color', swir: 'shortwave infrared (heat)', infra: 'infrared' };
+const STYLE_NOTE = { natural: 'What the eye would see from orbit.', swir: 'Shortwave infrared: hot ground such as lava glows orange to yellow.', infra: 'Near infrared: living vegetation is red, bare ash and lava are dark.' };
+const styleLine = style => { const [a, b, c] = STYLE_BANDS[style] || STYLE_BANDS.natural; return `Sentinel-2 · ${STYLE_NAME[style] || STYLE_NAME.natural} · bands ${a}, ${b} and ${c}`; };
+const IMAGE_COLLECTION = 'sentinel-2-l1c';
+function evalscriptFor(style, orbit){
+  const [r, g, b] = STYLE_BANDS[style] || STYLE_BANDS.natural;
+  const T = TRUE_COLOR;
+  return `//VERSION=3
+var maxR = ${T.maxR}, midR = ${T.midR}, sat = ${T.sat}, gamma = ${T.gamma}, gOff = ${T.gOff};
+var gOffPow = Math.pow(gOff, gamma), gOffRange = Math.pow(1 + gOff, gamma) - gOffPow;
+function setup(){ return { input:["${r}","${g}","${b}","dataMask"], mosaicking:"TILE", output:{ bands:3 } }; }
+${orbitFilter(orbit)}
+function clip(s){ return s < 0 ? 0 : s > 1 ? 1 : s; }
+function adj(a, tx, ty, maxC){ var ar = clip(a / maxC); return ar * (ar * (tx / maxC + ty - 1) - ty) / (ar * (2 * tx / maxC - 1) - tx / maxC); }
+function adjGamma(b){ return (Math.pow(b + gOff, gamma) - gOffPow) / gOffRange; }
+function sAdj(a){ return adjGamma(adj(a, midR, 1, maxR)); }
+function sRGB(c){ return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 0.41666666666) - 0.055; }
+function evaluatePixel(ss){
+  var p = ss[0] || { dataMask:0 }; for (var i = 0; i < ss.length; i++) if (ss[i].dataMask == 1) { p = ss[i]; break; }
+  if (!p.dataMask) return [0.04, 0.06, 0.1];
+  var lr = sAdj(p.${r} - ${T.ray[r]}), lg = sAdj(p.${g} - ${T.ray[g]}), lb = sAdj(p.${b} - ${T.ray[b]});
+  var avg = (lr + lg + lb) / 3 * (1 - sat);
+  return [sRGB(clip(avg + lr * sat)), sRGB(clip(avg + lg * sat)), sRGB(clip(avg + lb * sat))];
+}`;
+}
+
+/* ---------- connection: a relay holds the Copernicus credentials ----------
+   On the public site: the Cloudflare Worker set in config.js. Locally: scripts/serve.py. */
+const RELAY_BASE = ((window.CFS_CONFIG && window.CFS_CONFIG.relay) || '').trim().replace(/\/+$/, '');
+const relayRoot = () => RELAY_BASE ? RELAY_BASE + '/cdse' : '/cdse';
+let relayCheck = null;
+const relayInfo = () => relayCheck || (relayCheck = (RELAY_BASE || location.protocol.startsWith('http'))
+  ? fetch(relayRoot() + '/ping', {cache:'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined})
+      .then(r => r.ok ? r.json() : null).then(j => ({relay: !!(j && j.relay === true)})).catch(() => ({relay:false}))
+  : Promise.resolve({relay:false}));
+const LOCAL = location.protocol === 'file:' || ['localhost', '127.0.0.1', ''].includes(location.hostname);
+const NO_RELAY = LOCAL
+  ? 'To load the satellite images, start the site with "python3 scripts/serve.py" and use the page it opens at http://localhost:8000.'
+  : 'This site has no connection to Copernicus configured yet, so no satellite images can be shown.';
+/* Copernicus reports errors as {"error": {"status", "reason", "message", "code"}}; the relays as {"relayError": "..."} or {"error": "..."}. */
+async function errorText(r){
+  try {
+    const j = await r.clone().json();
+    const e = j.relayError || j.error || j;
+    if (typeof e === 'string') return e;
+    return [e.message, e.reason, e.code].filter(Boolean).join(' / ') || JSON.stringify(e).slice(0, 300);
+  } catch {
+    try { return (await r.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300); } catch { return ''; }
+  }
+}
+async function cdse(route, body, accept, label = ''){
+  if (!(await relayInfo()).relay) throw new Error(NO_RELAY);
+  const what = route === 'statistics' ? 'scene search' : 'image request';
+  // Copernicus server errors (5xx) and rate limits (429) are usually temporary: retry twice
+  for (let attempt = 0; ; attempt++) {
+    let r;
+    try {
+      r = await fetch(relayRoot() + '/' + route, {method:'POST', body:JSON.stringify(body), headers:{'Content-Type':'application/json', 'Accept':accept}});
+    } catch {
+      if (attempt < 2) { await new Promise(res => setTimeout(res, 1500 * (attempt + 1))); continue; }
+      throw new Error('The connection to Copernicus is not responding. Try again later.');
+    }
+    if (r.ok) return r;
+    const msg = await errorText(r);
+    console.error(`Copernicus ${what} ${label} failed: HTTP ${r.status}`, msg, body);
+    if ((r.status >= 500 || r.status === 429) && attempt < 2) { await new Promise(res => setTimeout(res, 2000 * (attempt + 1))); continue; }
+    if (r.status === 429) throw new Error('Too many requests in a short time, or Copernicus is busy. Wait a minute and try again.');
+    throw new Error(`Copernicus ${what}${label ? ' for ' + label : ''} failed (HTTP ${r.status})${msg ? ': ' + msg : ''}.`);
+  }
+}
+
+/* ---------- caches: memory first, then IndexedDB so repeat visits cost nothing ---------- */
+const memCache = new Map();
+/* Browser cache (IndexedDB "cfs-cache"): what the page has already fetched from Copernicus, so that coming back, or switching between volcanoes and events, needs no new requests.
+   Two kinds of entries:  scene|...  the clearest scene of an event (a few hundred bytes)   img|...  the satellite image of one scene and colour mode (a JPEG).
+   Only the images are large. They are capped (IMG_CAP): when the total is over the cap, the images used longest ago are deleted until it is
+   down to IMG_KEEP. Images made by an older CDSE.version are deleted at start. */
+const IMG_CAP = 400 * 1024 * 1024, IMG_KEEP = 300 * 1024 * 1024;       // 2400 px JPEGs of a volcano are about 1 to 2 MB each
+const idb = (() => {
+  let dbp = null, trimTimer = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try { const r = indexedDB.open('cfs-cache', 2);
+      r.onupgradeneeded = () => { const db = r.result;
+        if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+        if (!db.objectStoreNames.contains('use')) db.createObjectStore('use'); };      // use: key -> {t: last used, s: size in bytes}
+      r.onsuccess = () => { const db = r.result; db.onversionchange = () => { db.close(); dbp = null; }; res(db); };    // let a newer page upgrade the database
+      r.onerror = () => rej(r.error);
+      r.onblocked = () => setTimeout(() => rej(new Error('cache blocked by another tab')), 2500);   // an old tab holds the old version: go on without the cache instead of waiting for ever
+    } catch (e) { rej(e); }
+  }));
+  const wait = req => new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); });
+  const run = fn => open().then(db => fn(db)).catch(() => null);
+  const touch = (k, v) => run(db => wait(db.transaction('use', 'readwrite').objectStore('use').put({t: Date.now(), s: v.size}, k)));
+  async function trim(){
+    await run(async db => {
+      const tx = db.transaction(['kv', 'use'], 'readwrite'), kv = tx.objectStore('kv'), use = tx.objectStore('use');   // one transaction: it stays open while we only wait for database requests
+      const keys = await wait(kv.getAllKeys()), uk = await wait(use.getAllKeys()), uv = await wait(use.getAll());
+      const uses = new Map(uk.map((k, i) => [k, uv[i]]));
+      const imgs = [];
+      for (const k of keys) {
+        if (!/^[^|]+\|img\|/.test(String(k))) continue;
+        if (!String(k).startsWith(CDSE.version + '|')) { kv.delete(k); use.delete(k); continue; }          // older rendering: gone
+        let u = uses.get(k);
+        if (!u) { const v = await wait(kv.get(k)); u = {t: 0, s: v && v.size || 0}; use.put(u, k); }      // saved before the cap existed
+        imgs.push([k, u]);
+      }
+      let total = imgs.reduce((n, [, u]) => n + u.s, 0);
+      if (total <= IMG_CAP) return;
+      imgs.sort((a, b) => a[1].t - b[1].t);
+      for (const [k, u] of imgs) { if (total <= IMG_KEEP) break; kv.delete(k); use.delete(k); total -= u.s; }
+    });
+  }
+  setTimeout(trim, 4000);                                                  // once, a few seconds after the page starts
+  return {
+    get: k => run(async db => { const v = await wait(db.transaction('kv').objectStore('kv').get(k)); if (v instanceof Blob) touch(k, v); return v; }),
+    set: (k, v) => run(async db => { await wait(db.transaction('kv', 'readwrite').objectStore('kv').put(v, k)); if (v instanceof Blob) { await touch(k, v); clearTimeout(trimTimer); trimTimer = setTimeout(trim, 3000); } })
+  };
+})();
+
+/* Image footprint per volcano: a square of 2 x half km around the summit, in Web Mercator so it lines up exactly. */
+const CRS3857 = 'http://www.opengis.net/def/crs/EPSG/0/3857';
+function imageFootprint(v){
+  if (v._fp) return v._fp;
+  const c = L.CRS.EPSG3857.project(L.latLng(v.lat, v.lon)), scale = 1 / Math.cos(v.lat * Math.PI / 180), d = v.half * 1000 * scale;   // Mercator metres per ground metre
+  const sw = L.CRS.EPSG3857.unproject(L.point(c.x - d, c.y - d)), ne = L.CRS.EPSG3857.unproject(L.point(c.x + d, c.y + d));
+  let w = Math.round(2 * v.half * 1000 / CDSE.groundRes); w = Math.min(w, CDSE.maxPx);
+  return v._fp = {bounds:[[sw.lat, sw.lng], [ne.lat, ne.lng]], bbox:[c.x - d, c.y - d, c.x + d, c.y + d].map(Math.round), w, h: w, statsRes: Math.round(CDSE.statsRes * scale)};
+}
+
+/* ---------- scene choice ---------- */
+function pickScene(days){
+  const byDate = (a, b) => a.date.localeCompare(b.date);
+  const clear = days.filter(d => d.cloud <= CDSE.maxCloud).sort(byDate);
+  if (clear.length) return {...clear[0], clear:true};
+  const rest = days.filter(d => d.cloud <= CDSE.fallbackCloud).sort((a, b) => (a.cloud - b.cloud) || byDate(a, b));
+  return rest.length ? {...rest[0], clear:false} : null;
+}
+const eventRunning = ev => ev.find[1] >= addDays(TODAY, -3);      // new acquisitions may still arrive
+async function findScene(v, ev){
+  const [from, to] = ev.find;
+  if (from > TODAY) return null;
+  const fp = imageFootprint(v), key = `${CDSE.version}|scene|${v.id}|${from}|${to}|${fp.bbox.join(',')}`;
+  if (memCache.has(key)) return memCache.get(key);
+  const p = (async () => {
+    const hit = await idb.get(key);
+    if (hit && (!eventRunning(ev) || Date.now() - hit.savedAt < 12 * 3600e3)) return hit.scene;     // finished periods never change; running ones are re-checked twice a day
+    const j = await (await cdse('statistics', {
+      input: { bounds: { bbox: fp.bbox, properties: { crs: CRS3857 } },
+               data: [{ type: CDSE.collection, dataFilter: { mosaickingOrder: 'leastCC' } }] },
+      aggregation: { timeRange: { from: `${from}T00:00:00Z`, to: `${addDays(to, 1)}T00:00:00Z` },       // up to and including the last day
+                     aggregationInterval: { of: 'P1D' }, evalscript: SCENE_EVALSCRIPT, resx: fp.statsRes, resy: fp.statsRes }
+    }, 'application/json', `${v.name}, ${ev.label}`)).json();
+    const days = (j.data || []).flatMap(d => {          // per day up to two scenes, one for each orbit
+      try {
+        const o = d.outputs, m = k => o[k].bands.B0.stats.mean, date = d.interval.from.slice(0, 10);
+        return ['A', 'B'].map(k => { const valid = m('valid' + k), orb = Math.round(m('orb' + k));
+          return valid > 0 && orb ? { date, orbit: 'R' + String(orb).padStart(3, '0'), cloud: m('cloud' + k) / valid, cover: valid } : null; }).filter(Boolean);
+      } catch { return []; }
+    }).filter(d => d.date >= from && d.date <= to && Number.isFinite(d.cloud) && d.cover >= CDSE.minCover);
+    const scene = pickScene(days);
+    idb.set(key, {scene, savedAt: Date.now()});
+    return scene;
+  })();
+  memCache.set(key, p);
+  p.catch(() => memCache.delete(key));
+  return p;
+}
+
+/* ---------- images ---------- */
+let pending = 0, active = 0; const queue = [];
+const runQueue = () => { while (active < 3 && queue.length) { active++; const job = queue.shift(); job().finally(() => { active--; runQueue(); }); } };
+const queued = fn => new Promise((res, rej) => { queue.push(() => fn().then(res, rej)); runQueue(); });
+function loadImage(v, ev){
+  const sc = state.available[ev.id], style = state.style, fp = imageFootprint(v);
+  const key = `${CDSE.version}|img|${(STYLE_BANDS[style] || []).join('')}|${v.id}|${sc.date}${sc.orbit ? '|' + sc.orbit : ''}|${fp.bbox.join(',')}`;
+  if (memCache.has(key)) return memCache.get(key);
+  const p = (async () => {
+    const hit = await idb.get(key);
+    if (hit instanceof Blob) return URL.createObjectURL(hit);
+    pending++; setLoading();
+    try {
+      const blob = await queued(() => cdse('process', {
+        input: { bounds: { bbox: fp.bbox, properties: { crs: CRS3857 } },
+                 data: [{ type: IMAGE_COLLECTION, dataFilter: { timeRange: { from:`${sc.date}T00:00:00Z`, to:`${sc.date}T23:59:59Z` }, mosaickingOrder: 'leastCC' }, processing: { upsampling: 'BILINEAR' } }] },   // bilinear: smooth 20 and 60 m bands
+        output: { width: fp.w, height: fp.h, responses: [{ identifier:'default', format:{ type:'image/jpeg' } }] },
+        evalscript: evalscriptFor(style, sc.orbit)
+      }, 'image/jpeg', `${v.name}, ${fmtDate(sc.date)}`).then(r => r.blob()));
+      idb.set(key, blob);
+      return URL.createObjectURL(blob);
+    } finally { pending--; setLoading(); }
+  })();
+  memCache.set(key, p);
+  p.catch(() => memCache.delete(key));
+  return p;
+}
+function setLoading(){
+  if (!state.checked) return;
+  setStatus(pending ? `Loading ${pending} satellite image${pending > 1 ? 's' : ''} from Copernicus…` : statusLine());
+}
+const fmtDate = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric', timeZone:'UTC'});
+const fmtShort = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric', timeZone:'UTC'});
+
+/* =====================================================================
+   3. State and URL hash
+   ===================================================================== */
+const state = {
+  volcano: (VOLCANOES[0] || {}).id, mode: 'compare',
+  a: null, b: null, from: null, to: null, one: null,        // event ids of the selected volcano
+  split: 0.5, available: {}, checked: false,                // available[eventId] = chosen scene {date, orbit, cloud, clear} or null (no scene found)
+  frame: 0, playing: false, timer: null,
+  style: ['swir', 'infra'].includes(prefs.style) ? prefs.style : 'natural'
+};
+(function readHash(){
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (VOLCANOES.some(v => v.id === p.get('v'))) state.volcano = p.get('v');
+  if (['timelapse', 'single'].includes(p.get('m'))) state.mode = p.get('m');
+  ['a','b','from','to','one'].forEach(k => { if (p.get(k) !== null && p.get(k) !== '' && Number.isInteger(+p.get(k))) state[k] = +p.get(k); });
+  if (['natural', 'swir', 'infra'].includes(p.get('s'))) state.style = p.get('s');
+})();
+const currentVolcano = () => VOLCANOES.find(v => v.id === state.volcano);
+const eventsOf = () => currentVolcano().events;
+const okEvents = () => eventsOf().filter(e => state.available[e.id]);
+const eventById = id => eventsOf().find(e => e.id === id);
+const writeHash = () => history.replaceState(null, '', `#v=${state.volcano}&m=${state.mode}&s=${state.style}&a=${state.a}&b=${state.b}&from=${state.from}&to=${state.to}&one=${state.one}`);
+
+/* =====================================================================
+   4. Map
+   ===================================================================== */
+const COARSE = matchMedia('(pointer:coarse)').matches;      // touch screens: one finger scrolls the page, two move the map
+const map = L.map('map', {zoomControl:false, attributionControl:false, minZoom:6, maxZoom:17, zoomSnap:0.25, zoomDelta:0.5, wheelPxPerZoomLevel:120, dragging: !COARSE});
+[['bgPane',205],['paneA',210],['paneB',220],['paneT',230],['labels',450]].forEach(([n,z]) => { map.createPane(n); map.getPane(n).style.zIndex = z; });
+map.getPane('labels').style.pointerEvents = 'none';
+L.control.scale({position:'bottomright', imperial:false, maxWidth:150}).addTo(map);
+const mapEl = $('map');
+mapEl.style.backgroundColor = '#0a1426';
+
+const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:17, maxNativeZoom:19});
+const labels = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/overlay_bright_3857/default/g/{z}/{y}/{x}.png',
+  {pane:'labels', maxNativeZoom:16, maxZoom:17, opacity:.9}).addTo(map);
+const BG_YEAR = 2024;
+const bgTiles = L.tileLayer(`https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-${BG_YEAR}_3857/default/g/{z}/{y}/{x}.jpg`, {pane:'bgPane', maxNativeZoom:14, maxZoom:17}).addTo(map);
+const BLANK = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+let craterPin = null;
+function setPin(){
+  if (craterPin) { map.removeLayer(craterPin); craterPin = null; }
+  const v = currentVolcano();
+  if (v && $('pinToggle').checked) craterPin = L.marker([v.lat, v.lon], {icon: L.divIcon({className:'', html:'<div class="crater-pin"></div>', iconSize:[14,14], iconAnchor:[7,7]}), interactive:false, keyboard:false}).addTo(map);
+}
+function updateCredits(){
+  const evs = state.mode !== 'compare' ? (tlLayers[state.frame] ? [tlLayers[state.frame].ev] : []) : [state.a, state.b].map(eventById).filter(e => e && state.available[e.id]);
+  const yrs = [...new Set(evs.map(e => state.available[e.id].date.slice(0, 4)))].sort();
+  const parts = yrs.length ? [`Contains modified Copernicus Sentinel data ${yrs.join(' and ')}, processed via the <a href="https://dataspace.copernicus.eu" target="_blank" rel="noopener">Copernicus Data Space Ecosystem</a>`] : [];
+  parts.push(`Volcano facts: <a href="https://volcano.si.edu/" target="_blank" rel="noopener">Global Volcanism Program, Smithsonian Institution</a>`);
+  if ($('mosaicToggle').checked) parts.push(`Background: <a href="https://s2maps.eu" target="_blank" rel="noopener">Sentinel-2 cloudless ${BG_YEAR}</a> by EOX IT Services (CC BY-NC-SA 4.0, contains modified Copernicus Sentinel data)`);
+  if ($('osmToggle').checked) parts.push('Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors');
+  if ($('labelsToggle').checked) parts.push('Labels © OpenStreetMap contributors, EOX');
+  $('credits').innerHTML = parts.join(' · ');
+}
+$('credits').onclick = e => { if (e.target.tagName !== 'A') $('credits').classList.toggle('open'); };
+function setLayerToggles(){
+  const set = (layer, on) => { if (on && !map.hasLayer(layer)) layer.addTo(map); if (!on && map.hasLayer(layer)) map.removeLayer(layer); };
+  set(bgTiles, $('mosaicToggle').checked); set(osm, $('osmToggle').checked); set(labels, $('labelsToggle').checked);
+  if (map.hasLayer(osm)) osm.bringToBack();
+  setPin(); updateCredits();
+}
+['pinToggle','mosaicToggle','osmToggle','labelsToggle'].forEach(id => $(id).onchange = setLayerToggles);
+
+function showImage(ov, url){ ov.setUrl(url); }
+function imageryLayer(ev, pane, opacity = 1){
+  const v = currentVolcano(), ov = L.imageOverlay(BLANK, imageFootprint(v).bounds, {pane, opacity, interactive:false, className:'scene-img'});
+  loadImage(v, ev).then(url => showImage(ov, url)).catch(e => { setStatus(e.message); showNotice(e.message); });
+  return ov;
+}
+
+/* ---------- compare (swipe) ---------- */
+let layerA = null, layerB = null;
+function setCompareLayers(){
+  [layerA, layerB].forEach(l => l && map.removeLayer(l));
+  layerA = layerB = null;
+  const a = eventById(state.a), b = eventById(state.b);
+  $('stage').classList.add('no-images');
+  if (state.mode !== 'compare' || !a || !b || !state.available[a.id] || !state.available[b.id]) return;
+  $('stage').classList.remove('no-images');
+  layerA = imageryLayer(a, 'paneA').addTo(map);
+  layerB = imageryLayer(b, 'paneB').addTo(map);
+  clip(); updateCredits();
+}
+function clip(){
+  const size = map.getSize();
+  state.split = Math.min(.98, Math.max(.02, state.split));
+  const nw = map.containerPointToLayerPoint([0,0]), se = map.containerPointToLayerPoint(size);
+  const cx = nw.x + size.x * state.split, px = size.x * state.split;
+  map.getPane('paneA').style.clip = `rect(${nw.y}px, ${cx}px, ${se.y}px, ${nw.x}px)`;
+  map.getPane('paneB').style.clip = `rect(${nw.y}px, ${se.x}px, ${se.y}px, ${cx}px)`;
+  $('divider').style.left = px + 'px'; $('handle').style.left = px + 'px';
+  $('handle').setAttribute('aria-valuenow', Math.round(state.split * 100));
+}
+map.on('move zoom resize', clip);
+(function swipe(){
+  const handle = $('handle'), stage = $('stage');
+  let dragging = false;
+  const setPos = e => { const r = stage.getBoundingClientRect(); state.split = (e.clientX - r.left) / r.width; clip(); };
+  handle.addEventListener('pointerdown', e => { dragging = true; handle.setPointerCapture(e.pointerId); map.dragging.disable(); e.preventDefault(); });
+  handle.addEventListener('pointermove', e => dragging && setPos(e));
+  const end = () => { dragging = false; if (!COARSE) map.dragging.enable(); };
+  handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
+  handle.addEventListener('keydown', e => {
+    const step = e.shiftKey ? .1 : .02;
+    if (e.key === 'ArrowLeft') state.split -= step; else if (e.key === 'ArrowRight') state.split += step;
+    else if (e.key === 'Home') state.split = 0; else if (e.key === 'End') state.split = 1; else return;
+    e.preventDefault(); clip();
+  });
+})();
+
+/* ---------- timelapse ---------- */
+let tlLayers = [];   // [{ev, layer}]
+const tlFrames = () => state.mode === 'single' ? okEvents().filter(e => e.id === state.one) : okEvents().filter(e => e.id >= state.from && e.id <= state.to);
+function buildTimelapse(){
+  stopPlay();
+  tlLayers.forEach(t => map.removeLayer(t.layer)); tlLayers = [];
+  if (state.mode === 'compare') return;
+  tlLayers = tlFrames().map(ev => ({ev, layer: imageryLayer(ev, 'paneT', 0).addTo(map)}));      // every frame stays loaded at opacity 0 so switching is instant
+  state.frame = Math.min(state.frame, Math.max(0, tlLayers.length - 1));
+  const s = $('frameSlider');
+  s.max = Math.max(0, tlLayers.length - 1); s.value = state.frame;
+  $('playBtn').disabled = tlLayers.length < 2;
+  showFrame(state.frame);
+}
+function showFrame(i){
+  if (!tlLayers.length) return;
+  state.frame = i;
+  tlLayers.forEach((t, k) => t.layer.setOpacity(k === i ? 1 : 0));
+  const t = tlLayers[i], sc = state.available[t.ev.id];
+  $('tagT').firstChild.textContent = t.ev.label;
+  $('tagTsub').textContent = `${fmtShort(sc.date)}${sc.clear ? '' : ' · some clouds'}`;
+  $('tlDots').innerHTML = tlLayers.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
+  $('frameSlider').value = i;
+  updateCredits();
+}
+function stopPlay(){ state.playing = false; clearInterval(state.timer); state.timer = null; $('playBtn').textContent = 'Play'; }
+function startPlay(){
+  if (tlLayers.length < 2) return;
+  state.playing = true; $('playBtn').textContent = 'Pause';
+  state.timer = setInterval(() => {
+    let n = state.frame + 1;
+    if (n >= tlLayers.length) { if ($('loopToggle').checked) n = 0; else { stopPlay(); return; } }
+    showFrame(n);
+  }, +$('speedSel').value);
+}
+$('playBtn').onclick = () => state.playing ? stopPlay() : startPlay();
+$('speedSel').onchange = () => { if (state.playing) { stopPlay(); startPlay(); } };
+$('frameSlider').oninput = e => { stopPlay(); showFrame(+e.target.value); };
+
+/* =====================================================================
+   5. Scene search for the selected volcano
+   ===================================================================== */
+let searchGen = 0;
+function setStatus(text, busy = false){ const s = $('status'); s.textContent = text; s.classList.toggle('busy', busy); }
+function showNotice(text){ const n = $('notice'); n.textContent = text; n.classList.add('show'); clearTimeout(showNotice.t); showNotice.t = setTimeout(() => n.classList.remove('show'), 7000); }
+function statusLine(){
+  const evs = eventsOf(), found = evs.filter(e => state.available[e.id]), clouds = found.filter(e => !state.available[e.id].clear).length;
+  if (!found.length) return 'No usable scene found for this volcano. Heavy cloud is common over tropical volcanoes.';
+  return `Scenes found for ${found.length} of ${evs.length} events${clouds ? `, ${clouds} with some clouds (dashed)` : ''}.`;
+}
+async function checkEvents(){
+  const gen = ++searchGen, v = currentVolcano();
+  state.available = {}; state.checked = false; renderPickers();
+  setStatus(`Looking for the clearest scene of each event of ${v.name}…`, true);
+  let done = 0;
+  const evs = v.events, work = evs.map(async ev => {
+    let sc = null;
+    try { sc = await findScene(v, ev); }
+    catch (e) { if (gen === searchGen) { setStatus(e.message); showNotice(e.message); } throw e; }
+    if (gen !== searchGen) return;                            // a newer search has started: drop this result
+    state.available[ev.id] = sc; done++;
+    setStatus(`Looking for the clearest scene of each event… ${done} of ${evs.length}`, true); renderPickers();
+  });
+  try { await Promise.all(work.map(p => p.catch(e => { throw e; }))); } catch { return; }
+  if (gen !== searchGen) return;
+  state.checked = true; ensureSelection(); renderPickers(); renderMode(); setStatus(statusLine());
+}
+function ensureSelection(){
+  const ok = okEvents().map(e => e.id), first = ok[0], last = ok[ok.length - 1];
+  const fix = (k, dflt) => { if (!ok.includes(state[k])) state[k] = dflt; };
+  fix('a', first); fix('b', last); fix('from', first); fix('to', last); fix('one', last);
+  if (state.from > state.to) [state.from, state.to] = [state.to, state.from];
+}
+
+/* =====================================================================
+   6. Rendering: pickers, modes, volcano list, story
+   ===================================================================== */
+function renderPickers(){
+  const evs = eventsOf();
+  const draw = (el, key) => {
+    $(el).innerHTML = evs.map(e => {
+      const sc = state.available[e.id], wait = !(e.id in state.available);
+      return `<button type="button" data-id="${e.id}" class="${wait ? 'wait' : sc && !sc.clear ? 'some' : ''}" ${wait || !sc ? 'disabled' : ''} aria-pressed="${state[key] === e.id}" title="${sc ? fmtDate(sc.date) + (sc.clear ? '' : ' (some clouds)') : wait ? 'Searching…' : 'No usable scene'}">${e.label}</button>`;
+    }).join('');
+    $(el).querySelectorAll('button').forEach(b => b.onclick = () => { state[key] = +b.dataset.id; if (['from','to'].includes(key) && state.from > state.to) { if (key === 'from') state.to = state.from; else state.from = state.to; } renderPickers(); renderMode(); });
+  };
+  draw('evA', 'a'); draw('evB', 'b'); draw('evOne', 'one'); draw('evFrom', 'from'); draw('evTo', 'to');
+  const tags = (id, key) => { const e = eventById(state[key]), sc = e && state.available[e.id]; if (sc) $(id).firstChild.textContent = e.label, $(id).querySelector('small').textContent = fmtShort(sc.date) + (sc.clear ? '' : ' · some clouds'); };
+  tags('tagA', 'a'); tags('tagB', 'b');
+  renderStory();
+}
+function renderMode(){
+  const m = state.mode;
+  [['modeSingle','single'],['modeCompare','compare'],['modeTimelapse','timelapse']].forEach(([id, k]) => $(id).setAttribute('aria-pressed', m === k));
+  $('compareControls').hidden = m !== 'compare'; $('singleControls').hidden = m !== 'single'; $('timelapseControls').hidden = m !== 'timelapse';
+  $('stage').classList.toggle('no-compare', m !== 'compare'); $('stage').classList.toggle('is-tl', m !== 'compare');
+  [['styleNatural','natural'],['styleSwir','swir'],['styleInfra','infra']].forEach(([id, k]) => $(id).setAttribute('aria-pressed', state.style === k));
+  $('styleNote').textContent = STYLE_NOTE[state.style];
+  stopPlay();
+  [layerA, layerB].forEach(l => l && map.removeLayer(l)); layerA = layerB = null;
+  tlLayers.forEach(t => map.removeLayer(t.layer)); tlLayers = [];
+  if (state.checked || Object.keys(state.available).length) { if (m === 'compare') setCompareLayers(); else buildTimelapse(); }
+  if (m === 'single') $('tagTsub').textContent = '';
+  updateCredits(); writeHash();
+}
+$('modeSingle').onclick = () => { state.mode = 'single'; renderMode(); };
+$('modeCompare').onclick = () => { state.mode = 'compare'; renderMode(); };
+$('modeTimelapse').onclick = () => { state.mode = 'timelapse'; renderMode(); };
+[['styleNatural','natural'],['styleSwir','swir'],['styleInfra','infra']].forEach(([id, k]) => $(id).onclick = () => {
+  if (state.style === k) return; state.style = k; prefs.style = k; savePrefs();
+  memCache.forEach((p, key) => { if (key.includes('|img|')) memCache.delete(key); });          // images are per colour style; scenes stay
+  renderMode();
+});
+
+function renderVolcanoList(){
+  $('volcanoList').innerHTML = VOLCANOES.map(v => `<li><button type="button" data-id="${v.id}" aria-pressed="${v.id === state.volcano}">${v.name}<small>${v.country}</small></button></li>`).join('');
+  $('volcanoList').querySelectorAll('button').forEach(b => b.onclick = () => selectVolcano(b.dataset.id));
+  $('mVolcano').innerHTML = VOLCANOES.map(v => `<option value="${v.id}" ${v.id === state.volcano ? 'selected' : ''}>${v.name} (${v.country})</option>`).join('');
+  $('mVolcano').onchange = e => selectVolcano(e.target.value);
+}
+function selectVolcano(id){
+  if (id === state.volcano && state.checked) return;
+  state.volcano = id; state.a = state.b = state.from = state.to = state.one = null; state.frame = 0;
+  stopPlay(); renderVolcanoList(); fitVolcano(false); setPin(); closeVideo(); checkEvents(); writeHash();
+}
+function fitVolcano(animate = true){ map.fitBounds(imageFootprint(currentVolcano()).bounds, {animate, padding:[10, 10]}); }
+$('fitBtn').onclick = () => fitVolcano();
+$('craterBtn').onclick = () => { const v = currentVolcano(); map.setView([v.lat, v.lon], Math.max(map.getZoom(), 14)); };
+$('zoomIn').onclick = () => map.zoomIn(); $('zoomOut').onclick = () => map.zoomOut();
+
+/* ---------- the story on the right ---------- */
+let storyTab = 'facts', summaryOpen = false;
+const ICON = { info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>', list: '<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>' };
+function renderStory(){
+  const v = currentVolcano(); if (!v) return;
+  const tab = (k, t) => `<button type="button" data-tab="${k}" aria-pressed="${storyTab === k}">${t}</button>`;
+  let html = `<div class="card"><h3>${v.name}</h3><div class="small">${v.country} · ${v.region}</div></div><div class="tabs">${tab('facts', 'Facts')}${tab('eruptions', 'Eruptions')}${tab('about', 'About')}</div>`;
+  if (storyTab === 'facts') {
+    const s = v.summary || '', short = s.length > 360 && !summaryOpen ? s.slice(0, s.lastIndexOf(' ', 340)) + '…' : s;
+    html += `<div class="card"><h2>${ICON.info}Volcano</h2><div class="tiles">
+      <div class="tile"><b>${v.elevation.toLocaleString('en-GB')} m</b><span>elevation</span></div>
+      <div class="tile"><b>${v.lastEruption}</b><span>last known eruption</span></div>
+      <div class="tile"><b>${v.type}</b><span>type</span></div>
+      <div class="tile"><b>${(v.rock || '').replace(/ \/ .*/, '') || 'n/a'}</b><span>main rock type</span></div></div>
+      <p>${short}${s.length > 360 ? ` <button type="button" class="more" id="moreSummary">${summaryOpen ? 'less' : 'more'}</button>` : ''}</p>
+      ${v.note ? `<p class="small">${v.note}</p>` : ''}
+      <p class="small">Source: <a href="${GVP_URL(v)}" target="_blank" rel="noopener">Global Volcanism Program, Smithsonian Institution</a>, Volcanoes of the World, volcano ${v.gvp}.</p></div>`;
+  } else if (storyTab === 'eruptions') {
+    html += `<div class="card"><h2>${ICON.list}Events since 2016</h2><ul class="erupt">` + v.events.map(e => {
+      const sc = state.available[e.id], rec = e.record, ongoing = rec.end === null;
+      return `<li data-id="${e.id}" class="${[state.a, state.b, state.one].includes(e.id) && state.checked ? 'sel' : ''}"><span><b>${e.label}</b>${sc ? '' : ' <small>(no scene)</small>'}</span><small>${rec.vei !== null && rec.vei !== undefined ? `VEI ${rec.vei} · ` : ''}GVP record ${fmtShort(rec.start)} - ${ongoing ? 'ongoing' : fmtShort(rec.end)}</small></li>`;
+    }).join('') + `</ul><p class="small">VEI is the highest Volcanic Explosivity Index (0 to 8) GVP lists for the whole eruption record. Tap an event to compare it.</p></div>`;
+  } else {
+    html += `<div class="card"><h2>${ICON.info}About Craters from Space</h2>
+      <p>One clear Sentinel-2 scene for each eruption event of ten of the world's most active volcanoes, since 2016. The list of volcanoes is chosen by hand.</p>
+      <p><b>Events.</b> Each eruption record of the Global Volcanism Program (GVP) that overlaps the Sentinel-2 era is one event. Records longer than 150 days (persistent activity) are split into one event per calendar year. Short eruptions get a search period of at least 30 days from their start, so the scene can be a few weeks after the eruption began.</p>
+      <p><b>Scene choice.</b> For every event the Sentinel-2 acquisitions in its search period are scored by cloud cover. The earliest scene with at most 5 % cloud is shown; if there is none, the least cloudy one up to 30 % ("some clouds", dashed). Ash and steam plumes count as cloud for this score, so the strongest eruptions can be hard to find.</p>
+      <p><b>Colours.</b> Natural colour, shortwave infrared (bands B12, B8A and B04, where hot ground glows) and near infrared. Images are Sentinel-2 Level-1C of the chosen day.</p>
+      <p class="small">Sources: Copernicus Sentinel-2 data via the Copernicus Data Space Ecosystem; <a href="https://volcano.si.edu/" target="_blank" rel="noopener">Global Volcanism Program, Smithsonian Institution</a>; background EOX Sentinel-2 cloudless (CC BY-NC-SA 4.0); OpenStreetMap contributors. Non-commercial. Code MIT.</p></div>`;
+  }
+  $('story').innerHTML = html;
+  $('story').querySelectorAll('.tabs button').forEach(b => b.onclick = () => { storyTab = b.dataset.tab; renderStory(); });
+  const more = $('moreSummary'); if (more) more.onclick = () => { summaryOpen = !summaryOpen; renderStory(); };
+  $('story').querySelectorAll('.erupt li').forEach(li => li.onclick = () => {
+    const id = +li.dataset.id; if (!state.available[id]) return;
+    if (state.mode === 'compare') state.b = id; else state.one = id;
+    renderPickers(); renderMode();
+  });
+}
+
+if (innerWidth <= 900) $('layerbox').open = false;      // phones: the layer list starts closed
+
+/* ---------- two-finger map on touch screens ---------- */
+(function touchHint(){
+  if (!COARSE) return;
+  let t = null; const hint = $('gestureHint');
+  $('map').addEventListener('touchstart', e => { if (e.touches.length === 1) { hint.classList.add('show'); clearTimeout(t); t = setTimeout(() => hint.classList.remove('show'), 1200); } else hint.classList.remove('show'); }, {passive:true});
+})();
+$('shareBtn').onclick = async () => {
+  writeHash();
+  const data = {title: 'Craters from Space', text: `${currentVolcano().name} from space`, url: location.href};
+  try { if (navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(location.href); showNotice('Link copied.'); } } catch {}
+};
+
+/* =====================================================================
+   7. Download: one picture, or an animation (MP4)
+      The frame on the map is cut out of the satellite images and drawn on a canvas with the labels; the animation is encoded with WebCodecs (H.264).
+   ===================================================================== */
+const VIDEO = {
+  fps: 30,
+  formats: {   // safe zones keep text clear of the apps' own buttons and captions
+    reel: { w:1080, h:1920, safe:{ top:270, bottom:670, left:65, right:140 } },
+    feed: { w:1080, h:1350, safe:{ top:84,  bottom:96,  left:72, right:72 } },
+    wide: { w:1920, h:1080, safe:{ top:56,  bottom:56,  left:90, right:90 } }
+  },
+  fade: 0.4, hold: 1.2, outro: 3.0,
+  codecs: ['avc1.640028', 'avc1.4d0028', 'avc1.42e028']   // H.264 High, Main, Baseline (level 4.0)
+};
+const STILL_MARGINS = { reel: { top: 74, bottom: 66, left: 64, right: 64 }, feed: { top: 74, bottom: 66, left: 64, right: 64 }, wide: { top: 56, bottom: 56, left: 90, right: 90 } };
+const FMT_SUFFIX = { reel: '9x16', feed: '4x5', wide: '16x9' };
+const FONT = '"Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif';
+const vstate = { fmt: 'wide', type: 'timelapse', kind: 'video', busy: false };
+const marginsFor = (kind, fmt) => kind === 'image' ? STILL_MARGINS[fmt] : VIDEO.formats[fmt].safe;
+const exportEvents = () => vstate.kind === 'image' ? (state.mode === 'single' ? [state.one] : state.mode === 'timelapse' && tlLayers[state.frame] ? [tlLayers[state.frame].ev.id] : [state.b]).map(eventById).filter(e => e && state.available[e.id])
+  : vstate.type === 'swipe' ? [state.a, state.b].map(eventById).filter(e => e && state.available[e.id]).filter((e, i, a) => a.indexOf(e) === i) : tlFramesAll();
+const tlFramesAll = () => okEvents().filter(e => e.id >= Math.min(state.from, state.to) && e.id <= Math.max(state.from, state.to));
+const shortSlug = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+function frameRect(){
+  const F = VIDEO.formats[vstate.fmt], size = map.getSize(), m = 20, top = 44, bottom = Math.max(70, sheetOverlap + 12);
+  let h = size.y - top - m - bottom, w = h * F.w / F.h;
+  if (w > size.x - 2 * m) { w = size.x - 2 * m; h = w * F.h / F.w; }
+  return { x: (size.x - w) / 2, y: top + (size.y - top - bottom - h) / 2, w, h };
+}
+let sheetOverlap = 0;
+function measureSheetOverlap(){
+  const sh = $('videoSheet'); if (sh.hidden) return 0;
+  const st = $('stage').getBoundingClientRect(), sr = sh.getBoundingClientRect();
+  const across = Math.min(st.right, sr.right) - Math.max(st.left, sr.left);
+  return across > 40 ? Math.max(0, st.bottom - sr.top) : 0;
+}
+function frameGroundRes(){            // metres of terrain per output pixel
+  const r = frameRect(), F = VIDEO.formats[vstate.fmt];
+  return map.distance(map.containerPointToLatLng([r.x, r.y + r.h / 2]), map.containerPointToLatLng([r.x + r.w, r.y + r.h / 2])) / F.w;
+}
+function updateFrame(){
+  sheetOverlap = measureSheetOverlap();
+  const r = frameRect(), f = $('videoFrame'), F = VIDEO.formats[vstate.fmt];
+  Object.assign(f.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' }); f.hidden = $('videoSheet').hidden;
+  $('videoFrameNote').textContent = `${F.w} × ${F.h}`;
+  const n = exportEvents().length;
+  $('vsInfo').textContent = vstate.kind === 'image' ? (n ? '' : 'Pick an event with a scene first.')
+    : vstate.type === 'swipe' ? (n === 2 ? '' : 'Pick two different events in Compare first.') : (n >= 2 ? `${n} events.` : 'Pick a timelapse range of at least two events first.');
+}
+map.on('move zoom resize', () => { if (!$('videoSheet').hidden) updateFrame(); });
+addEventListener('resize', () => { if (!$('videoSheet').hidden) updateFrame(); });
+function openVideo(kind){
+  vstate.kind = kind; const sh = $('videoSheet');
+  sh.classList.toggle('is-image', kind === 'image'); sh.classList.toggle('is-video', kind !== 'image');
+  $('vsTitle').textContent = kind === 'image' ? 'Download image' : 'Download animation'; $('vsGo').textContent = kind === 'image' ? 'Download image' : 'Download video';
+  if (kind !== 'image') { vstate.type = state.mode === 'compare' ? 'swipe' : 'timelapse'; syncType(); }
+  sh.hidden = false; $('vsProgress').hidden = true; updateFrame(); setTimeout(updateFrame, 50);
+}
+function closeVideo(){ $('videoSheet').hidden = true; $('videoFrame').hidden = true; }
+function syncType(){ $('vtTimelapse').setAttribute('aria-pressed', vstate.type === 'timelapse'); $('vtSwipe').setAttribute('aria-pressed', vstate.type === 'swipe'); }
+const FMT_BTN = { wide: 'vfWide', reel: 'vfReel', feed: 'vfFeed' };
+const setFmt = f => { vstate.fmt = f; Object.entries(FMT_BTN).forEach(([k, id]) => $(id).setAttribute('aria-pressed', k === f)); updateFrame(); };
+Object.entries(FMT_BTN).forEach(([k, id]) => $(id).onclick = () => setFmt(k));
+$('vtTimelapse').onclick = () => { vstate.type = 'timelapse'; syncType(); updateFrame(); };
+$('vtSwipe').onclick = () => { vstate.type = 'swipe'; syncType(); updateFrame(); };
+$('imageBtn').onclick = () => openVideo('image');
+$('videoBtn').onclick = () => openVideo('video');
+$('vsClose').onclick = closeVideo;
+$('vsGo').onclick = () => vstate.kind === 'image' ? makeImage() : makeVideo();
+function progress(frac, label){ $('vsProgress').hidden = false; $('vsBar').style.width = Math.round(frac * 100) + '%'; if (label) $('vsInfo').textContent = label; }
+
+/* ---------- drawing ---------- */
+function fitText(ctx, text, weight, size, maxW){ let s = size; ctx.font = `${weight} ${s}px ${FONT}`; while (ctx.measureText(text).width > maxW && s > 12) { s -= 2; ctx.font = `${weight} ${s}px ${FONT}`; } return s; }
+function shadowText(ctx, text, x, y, o = {}){
+  ctx.save(); ctx.fillStyle = o.color || '#fff'; ctx.textAlign = o.align || 'left'; ctx.textBaseline = o.base || 'alphabetic';
+  ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = o.blur === undefined ? 12 : o.blur; ctx.shadowOffsetY = 2; ctx.fillText(text, x, y); ctx.restore();
+}
+function shade(ctx, W, H, S){
+  let g = ctx.createLinearGradient(0, 0, 0, S.top + 190); g.addColorStop(0, 'rgba(4,8,16,.62)'); g.addColorStop(1, 'rgba(4,8,16,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, S.top + 190);
+  g = ctx.createLinearGradient(0, H - S.bottom - 300, 0, H); g.addColorStop(0, 'rgba(4,8,16,0)'); g.addColorStop(1, 'rgba(4,8,16,.7)'); ctx.fillStyle = g; ctx.fillRect(0, H - S.bottom - 300, W, S.bottom + 300);
+}
+function niceScale(maxMetres){ const steps = [50, 100, 200, 500, 1000, 2000, 5000, 10000]; let best = steps[0]; for (const s of steps) if (s <= maxMetres) best = s; return best; }
+function drawHeader(ctx, S, W, info){
+  const u = W / 1080 < 1 ? 1 : W / 1920 > .9 ? 1.2 : 1;
+  ctx.font = `600 ${Math.round(24 * u)}px ${FONT}`; shadowText(ctx, 'CRATERS FROM SPACE', S.left, S.top + 22 * u, {color: '#ffb59a'});
+  const v = info.volcano, size = fitText(ctx, v.name, 800, Math.round(76 * u), W - S.left - S.right);
+  shadowText(ctx, v.name, S.left, S.top + 22 * u + size + 6);
+  ctx.font = `500 ${Math.round(28 * u)}px ${FONT}`; shadowText(ctx, `${v.country} · ${v.elevation.toLocaleString('en-GB')} m`, S.left, S.top + 22 * u + size + 6 + 38 * u, {color: '#e8ecf3'});
+}
+function drawScaleBar(ctx, info, x, y, maxW){
+  const m = niceScale(maxW * info.res * 0.9), px = m / info.res, lbl = m >= 1000 ? `${m / 1000} km` : `${m} m`;
+  ctx.save(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = 6;
+  ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x, y); ctx.lineTo(x + px, y); ctx.lineTo(x + px, y - 8); ctx.stroke(); ctx.restore();
+  ctx.font = `600 24px ${FONT}`; shadowText(ctx, lbl, x + px + 12, y, {base: 'alphabetic'});
+}
+function creditLine(info){
+  const yrs = [...new Set(info.scenes.map(s => s.date.slice(0, 4)))].join(', ');
+  return `Contains modified Copernicus Sentinel data ${yrs} · volcano facts: Smithsonian GVP · ${info.site}`;
+}
+function drawLabels(ctx, W, H, S, info, k){          // timelapse frame or single picture
+  shade(ctx, W, H, S); drawHeader(ctx, S, W, info);
+  const ev = info.events[k], sc = info.scenes[k], u = W / 1080 < 1 ? 1 : 1.2;
+  const big = Math.round(110 * u);
+  ctx.font = `800 ${big}px ${FONT}`; shadowText(ctx, ev.label, S.left, H - S.bottom - 72 * u);
+  ctx.font = `600 ${Math.round(32 * u)}px ${FONT}`; shadowText(ctx, `${fmtDate(sc.date)}${sc.clear ? '' : ' · some clouds'}`, S.left, H - S.bottom - 30 * u, {color: '#ffd2bf'});
+  ctx.font = `500 ${Math.round(22 * u)}px ${FONT}`; shadowText(ctx, styleLine(info.style), S.left, H - S.bottom + 8 * u + 14, {color: '#d6dbe6'});
+  ctx.font = `500 ${Math.round(20 * u)}px ${FONT}`; shadowText(ctx, creditLine(info), S.left, H - S.bottom + 8 * u + 14 + 28 * u, {color: '#b9c0cf', blur: 8});
+  drawScaleBar(ctx, info, W - S.right - Math.min(300, W * .2), H - S.bottom - 30 * u, Math.min(300, W * .2));
+}
+function drawSwipeLabels(ctx, W, H, S, info, split){
+  shade(ctx, W, H, S); drawHeader(ctx, S, W, info);
+  const u = W / 1080 < 1 ? 1 : 1.2;
+  [[0, S.left, 'left'], [1, W - S.right, 'right']].forEach(([k, x, al]) => {
+    const ev = info.events[k], sc = info.scenes[k];
+    ctx.font = `800 ${Math.round(84 * u)}px ${FONT}`; shadowText(ctx, ev.label, x, H - S.bottom - 52 * u, {align: al});
+    ctx.font = `600 ${Math.round(28 * u)}px ${FONT}`; shadowText(ctx, `${fmtShort(sc.date)}${sc.clear ? '' : ' · some clouds'}`, x, H - S.bottom - 14 * u, {align: al, color: '#ffd2bf'});
+  });
+  ctx.save(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(split, 0); ctx.lineTo(split, H); ctx.stroke();
+  ctx.fillStyle = '#D9481C'; ctx.beginPath(); ctx.arc(split, H / 2, 30, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore();
+  ctx.font = `500 ${Math.round(22 * u)}px ${FONT}`; shadowText(ctx, styleLine(info.style), S.left, H - S.bottom + 22, {color: '#d6dbe6'});
+  ctx.font = `500 ${Math.round(20 * u)}px ${FONT}`; shadowText(ctx, creditLine(info), S.left, H - S.bottom + 22 + 28 * u, {color: '#b9c0cf', blur: 8});
+}
+function drawOutro(ctx, W, H, S, info){
+  ctx.fillStyle = 'rgba(5,8,16,.72)'; ctx.fillRect(0, 0, W, H);
+  const u = W / 1080 < 1 ? 1 : 1.2, cx = W / 2;
+  ctx.font = `800 ${Math.round(72 * u)}px ${FONT}`; shadowText(ctx, 'Craters from Space', cx, H / 2 - 20, {align: 'center'});
+  ctx.font = `500 ${Math.round(28 * u)}px ${FONT}`; shadowText(ctx, info.site, cx, H / 2 + 30 * u, {align: 'center', color: '#ffd2bf'});
+  ctx.font = `500 ${Math.round(22 * u)}px ${FONT}`; shadowText(ctx, creditLine(info), cx, H / 2 + 90 * u, {align: 'center', color: '#b9c0cf', blur: 6});
+}
+
+/* The pictures of the given events, cut to the frame on the map. The footprint (a Web Mercator square) is mapped onto the canvas. */
+async function buildBase(bmp, crop, W, H){
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  x.fillStyle = '#0a1426'; x.fillRect(0, 0, W, H);
+  const { x0, x1, y1, fp } = crop, [bx0, by0, bx1, by1] = fp.bbox, kx = bmp.width / (bx1 - bx0), ky = bmp.height / (by1 - by0), scaleX = W / (x1 - x0);
+  const cropH = (x1 - x0) * H / W, y0 = y1 - cropH;                       // the frame in Mercator metres: x0..x1, y0..y1
+  // source rectangle in image pixels (y runs downwards in the image)
+  const sx0 = (x0 - bx0) * kx, sx1 = (x1 - bx0) * kx, sy0 = (by1 - y1) * ky, sy1 = (by1 - y0) * ky;
+  const ix0 = Math.max(0, sx0), ix1 = Math.min(bmp.width, sx1), iy0 = Math.max(0, sy0), iy1 = Math.min(bmp.height, sy1);
+  if (ix1 > ix0 && iy1 > iy0) x.drawImage(bmp, ix0, iy0, ix1 - ix0, iy1 - iy0, (ix0 - sx0) / (sx1 - sx0) * W, (iy0 - sy0) / (sy1 - sy0) * H, (ix1 - ix0) / (sx1 - sx0) * W, (iy1 - iy0) / (sy1 - sy0) * H);
+  return c;
+}
+async function pickCodec(W, H){
+  for (const codec of VIDEO.codecs) {
+    const cfg = { codec, width:W, height:H, bitrate:8e6, framerate:VIDEO.fps, avc:{format:'avc'} };
+    try { if ((await VideoEncoder.isConfigSupported(cfg)).supported) return cfg; } catch {}
+  }
+  return null;
+}
+async function frameBases(evs, W, H){
+  const v = currentVolcano(), fp = imageFootprint(v), r = frameRect();
+  const nw = L.CRS.EPSG3857.project(map.containerPointToLatLng([r.x, r.y]));
+  const se = L.CRS.EPSG3857.project(map.containerPointToLatLng([r.x + r.w, r.y + r.h]));
+  const crop = { x0: nw.x, x1: se.x, y1: nw.y, fp };
+  await Promise.all(['600 30px', '800 120px', '500 30px'].map(f => document.fonts.load(`${f} "Schibsted Grotesk"`).catch(() => {})));
+  let done = 0;
+  const urls = await Promise.all(evs.map(e => loadImage(v, e).then(url => { progress(0.2 * (++done) / evs.length, `Loading images ${done} of ${evs.length}…`); return url; })));
+  const bases = [];
+  for (const [i, url] of urls.entries()) {             // decoded one after the other with createImageBitmap: robust also on phones
+    const bmp = await createImageBitmap(await (await fetch(url)).blob());
+    bases.push(await buildBase(bmp, crop, W, H)); bmp.close();
+    progress(0.2 + 0.1 * (i + 1) / urls.length, 'Preparing frames…');
+  }
+  const info = { volcano: v, events: evs, scenes: evs.map(e => state.available[e.id]), res: frameGroundRes(), style: state.style, site: (location.host + location.pathname).replace(/\/(index\.html)?$/, '') || 'cratersfromspace' };
+  return { v, bases, info };
+}
+function downloadFile(file){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+async function makeImage(){
+  const evs = exportEvents(); if (!evs.length) return showNotice('Pick an event with a scene first.');
+  const F = VIDEO.formats[vstate.fmt], W = F.w, H = F.h, S = marginsFor('image', vstate.fmt);
+  vstate.busy = true; $('vsGo').disabled = true;
+  try {
+    const { v, bases, info } = await frameBases(evs, W, H);
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d');
+    ctx.drawImage(bases[0], 0, 0); drawLabels(ctx, W, H, S, info, 0);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+    progress(1, 'Image ready');
+    downloadFile(new File([blob], `cratersfromspace-${shortSlug(v.name)}-${shortSlug(evs[0].label)}-${FMT_SUFFIX[vstate.fmt]}.jpg`, { type: 'image/jpeg' }));
+  } catch (e) { console.error(e); showNotice('The image could not be made: ' + (e.message || e)); }
+  finally { vstate.busy = false; $('vsGo').disabled = false; }
+}
+async function makeVideo(){
+  const evs = exportEvents();
+  if (evs.length < 2) return showNotice(vstate.type === 'swipe' ? 'Pick two different events in Compare first.' : 'Pick a timelapse range of at least two events first.');
+  if (typeof VideoEncoder === 'undefined') return showNotice('This browser cannot create MP4 (H.264) videos. Try Chrome, Edge, or Safari on iPhone, iPad or Mac.');
+  const F = VIDEO.formats[vstate.fmt], W = F.w, H = F.h, S = marginsFor('video', vstate.fmt), fps = VIDEO.fps;
+  const cfg = await pickCodec(W, H);
+  if (!cfg) return showNotice('This browser cannot create MP4 (H.264) videos. Try Chrome, Edge, or Safari on iPhone, iPad or Mac.');
+  vstate.busy = true; $('vsGo').disabled = true;
+  try {
+    const { v, bases, info } = await frameBases(evs, W, H);
+    const swipe = vstate.type === 'swipe', per = +$('vSpeed').value, fade = Math.min(VIDEO.fade, per * .45), k = per / 1.2;
+    const swipeLen = SWIPE_KEYS.reduce((a, [, d]) => a + d * k, 0);
+    const total = swipe ? swipeLen + VIDEO.outro : evs.length * per + VIDEO.hold + VIDEO.outro, n = Math.round(total * fps);
+    const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H; const ctx = canvas.getContext('2d');
+    const ease = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
+    const renderSwipe = t => {
+      let u = t, from = .5, split = null;
+      for (const [to, d] of SWIPE_KEYS) { const dur = d * k; if (u < dur) { split = W * (from + (to - from) * ease(u / dur)); break; } u -= dur; from = to; }
+      if (split === null) { ctx.drawImage(bases[1], 0, 0); drawOutro(ctx, W, H, S, info); return; }
+      ctx.drawImage(bases[0], 0, 0);
+      ctx.save(); ctx.beginPath(); ctx.rect(split, 0, W - split, H); ctx.clip(); ctx.drawImage(bases[1], 0, 0); ctx.restore();
+      drawSwipeLabels(ctx, W, H, S, info, split);
+    };
+    const renderTl = t => {
+      ctx.globalAlpha = 1; const last = evs.length - 1;
+      if (t >= evs.length * per + VIDEO.hold) { ctx.drawImage(bases[last], 0, 0); drawOutro(ctx, W, H, S, info); return; }
+      const j = Math.min(last, Math.floor(t / per)), into = t - j * per;
+      ctx.drawImage(bases[j], 0, 0);
+      if (j > 0 && into < fade) { ctx.globalAlpha = 1 - into / fade; ctx.drawImage(bases[j - 1], 0, 0); ctx.globalAlpha = 1; }
+      drawLabels(ctx, W, H, S, info, j);
+    };
+    const render = swipe ? renderSwipe : renderTl;
+    if (swipe) { info.events = evs.slice(0, 2); info.scenes = info.scenes.slice(0, 2); }
+
+    const chunks = []; let desc = null, encErr = null;
+    const enc = new VideoEncoder({
+      output: (chunk, meta) => {
+        if (!desc && meta && meta.decoderConfig && meta.decoderConfig.description) desc = new Uint8Array(meta.decoderConfig.description);
+        const data = new Uint8Array(chunk.byteLength); chunk.copyTo(data);
+        chunks.push({ data, key: chunk.type === 'key', pts: chunk.timestamp });
+      },
+      error: e => { encErr = e; }
+    });
+    enc.configure(cfg);
+    for (let i = 0; i < n; i++) {
+      if (encErr) throw encErr;
+      render(i / fps);
+      const vf = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+      enc.encode(vf, { keyFrame: i % (fps * 2) === 0 }); vf.close();
+      while (enc.encodeQueueSize > 6) await new Promise(res => setTimeout(res, 4));
+      if (i % 15 === 0) { progress(0.3 + 0.68 * i / n, `Creating video ${Math.round(100 * i / n)} %…`); await new Promise(res => setTimeout(res, 0)); }
+    }
+    await enc.flush(); enc.close();
+    if (encErr) throw encErr;
+    if (!desc) throw new Error('the encoder did not report its H.264 settings');
+    const mp4 = muxMp4({ width: W, height: H, fps, avcC: desc, samples: chunks });
+    const file = new File([mp4], `cratersfromspace-${shortSlug(v.name)}-${swipe ? 'slider' : 'timelapse'}-${FMT_SUFFIX[vstate.fmt]}.mp4`, { type: 'video/mp4' });
+    progress(1, 'Video ready');
+    if (COARSE && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: `${v.name} from space` }); } catch (e) { if (e.name !== 'AbortError') downloadFile(file); }
+    } else downloadFile(file);
+    window.__lastVideo = file;           // for testing
+    $('vsGo').textContent = 'Download again';
+  } catch (e) {
+    console.error(e); showNotice('The video could not be made: ' + (e.message || e)); $('vsGo').textContent = 'Download video';
+  } finally { vstate.busy = false; $('vsGo').disabled = false; }
+}
+/* slider: [position, seconds]. Position = where the later event starts: 1 = only the first, 0 = only the later one. */
+const SWIPE_KEYS = [[0.5, 0.8], [1, 1.2], [1, 0.5], [0, 1.7], [0, 0.7], [1, 1.5], [1, 0.4], [0, 1.5], [0, 0.7], [0.5, 1.2], [0.5, 1.4]];
+
+/* ---- minimal MP4 packer: one H.264 video track, all metadata before the video data ---- */
+function muxMp4({ width, height, fps, avcC, samples }){
+  const TS = fps * 1000, DUR = 1000;                       // timescale and ticks per frame
+  const u8 = (...a) => Uint8Array.from(a), u16 = v => u8(v >> 8 & 255, v & 255);
+  const u32 = v => u8(v >>> 24 & 255, v >>> 16 & 255, v >>> 8 & 255, v & 255);
+  const str = s => Uint8Array.from([...s].map(c => c.charCodeAt(0)));
+  const cat = parts => { const n = parts.reduce((a, p) => a + p.length, 0), o = new Uint8Array(n); let i = 0; parts.forEach(p => { o.set(p, i); i += p.length; }); return o; };
+  const box = (type, ...parts) => { const body = cat(parts); return cat([u32(body.length + 8), str(type), body]); };
+  const full = (type, ver, flags, ...parts) => box(type, u8(ver, flags >> 16 & 255, flags >> 8 & 255, flags & 255), ...parts);
+  const zeros = n => new Uint8Array(n);
+  const matrix = cat([u32(0x00010000), u32(0), u32(0), u32(0), u32(0x00010000), u32(0), u32(0), u32(0), u32(0x40000000)]);
+  const n = samples.length, durTS = n * DUR, durMs = Math.round(n * 1000 / fps);
+  // decode order = output order; composition offsets cover encoders that reorder frames
+  const offsets = samples.map((s, i) => Math.round(s.pts * TS / 1e6) - i * DUR);
+  const needCtts = offsets.some(o => o !== 0);
+  const shift = needCtts ? -Math.min(0, ...offsets) : 0;
+  const stbl = (chunkOffset) => box('stbl',
+    full('stsd', 0, 0, u32(1), box('avc1', zeros(6), u16(1), zeros(16), u16(width), u16(height), u32(0x00480000), u32(0x00480000), u32(0), u16(1), zeros(32), u16(0x18), u16(0xffff), box('avcC', avcC))),
+    full('stts', 0, 0, u32(1), u32(n), u32(DUR)),
+    ...(needCtts ? [full('ctts', 0, 0, u32(n), ...offsets.flatMap(o => [u32(1), u32(o + shift)]))] : []),
+    full('stss', 0, 0, u32(samples.filter(s => s.key).length), ...samples.map((s, i) => s.key ? u32(i + 1) : null).filter(Boolean)),
+    full('stsc', 0, 0, u32(1), u32(1), u32(n), u32(1)),
+    full('stsz', 0, 0, u32(0), u32(n), ...samples.map(s => u32(s.data.length))),
+    full('stco', 0, 0, u32(1), u32(chunkOffset)));
+  const moov = off => box('moov',
+    full('mvhd', 0, 0, u32(0), u32(0), u32(1000), u32(durMs), u32(0x00010000), u16(0x0100), zeros(10), matrix, zeros(24), u32(2)),
+    box('trak',
+      full('tkhd', 0, 3, u32(0), u32(0), u32(1), u32(0), u32(durMs), zeros(8), u16(0), u16(0), u16(0), u16(0), matrix, u32(width << 16), u32(height << 16)),
+      ...(shift ? [box('edts', full('elst', 0, 0, u32(1), u32(durMs), u32(shift), u32(0x00010000)))] : []),
+      box('mdia',
+        full('mdhd', 0, 0, u32(0), u32(0), u32(TS), u32(durTS), u16(0x55c4), u16(0)),
+        full('hdlr', 0, 0, u32(0), str('vide'), zeros(12), str('VideoHandler'), u8(0)),
+        box('minf',
+          full('vmhd', 0, 1, zeros(8)),
+          box('dinf', full('dref', 0, 0, u32(1), full('url ', 0, 1))),
+          stbl(off)))));
+  const ftyp = box('ftyp', str('isom'), u32(512), str('isom'), str('iso2'), str('avc1'), str('mp41'));
+  const moovLen = moov(0).length;                          // offsets do not change the size
+  const dataStart = ftyp.length + moovLen + 8;
+  const mdatBody = cat(samples.map(s => s.data));
+  return cat([ftyp, moov(dataStart), u32(mdatBody.length + 8), str('mdat'), mdatBody]);
+}
+
+/* =====================================================================
+   8. Boot
+   ===================================================================== */
+if (!VOLCANOES.length) {
+  $('story').innerHTML = '<div class="card"><h3>No volcano data</h3><p>volcanoes.js is missing. Run <code>python3 scripts/build_volcanoes.py</code>.</p></div>';
+  setStatus('volcanoes.js is missing.');
+} else {
+  renderVolcanoList(); renderMode(); renderStory(); setLayerToggles();
+  fitVolcano(false);
+  checkEvents();
+}
+</script>
+</body>
+</html>
